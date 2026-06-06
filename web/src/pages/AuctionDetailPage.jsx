@@ -8,11 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Upload, X, Search } from 'lucide-react';
 
 const CATEGORIES = ['vehicle', 'trailer', 'equipment', 'attachment', 'other'];
 const FUEL_TYPES = ['diesel', 'gas', 'kerosene', 'natural_gas', 'electric', 'other', 'none'];
 const CONDITIONS = ['excellent', 'good', 'fair', 'poor'];
+const MILES_CATEGORIES = ['vehicle', 'trailer'];
 
 export default function AuctionDetailPage() {
   const { id } = useParams();
@@ -21,14 +22,20 @@ export default function AuctionDetailPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [openFlag, setOpenFlag] = useState(false);
+  const [photos, setPhotos] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [decoding, setDecoding] = useState(false);
 
   const empty = {
     title: '', category: 'equipment', subcategory: '', make: '', model: '', year: '',
-    serial_number: '', vin: '', usage_value: '', usage_unit: 'hours', horsepower: '',
-    weight_rating_lbs: '', fuel_type: '', condition: '', runs: '', starting_bid: '', parent_listing_id: '',
+    serial_number: '', vin: '', usage_value: '', horsepower: '',
+    weight_rating_lbs: '', fuel_type: '', condition: '', runs: '', reserve_price: '', parent_listing_id: '',
   };
   const [form, setForm] = useState(empty);
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+
+  const usageUnit = MILES_CATEGORIES.includes(form.category) ? 'miles' : 'hours';
+  const usageLabel = usageUnit === 'miles' ? 'Miles' : 'Hours';
 
   async function load() {
     try {
@@ -46,6 +53,41 @@ export default function AuctionDetailPage() {
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
+  async function decodeVin() {
+    const vin = (form.vin || '').trim();
+    if (vin.length < 11) { setError('Enter a full VIN to decode'); return; }
+    setError(''); setDecoding(true);
+    try {
+      const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(vin)}?format=json`);
+      const data = await res.json();
+      const r = data?.Results?.[0] || {};
+      setForm((f) => ({
+        ...f,
+        make: r.Make ? toTitle(r.Make) : f.make,
+        model: r.Model || f.model,
+        year: r.ModelYear || f.year,
+        fuel_type: mapFuel(r.FuelTypePrimary) || f.fuel_type,
+      }));
+      if (!r.Make && !r.Model) setError('No vehicle data found for that VIN');
+    } catch {
+      setError('VIN lookup failed — check your connection and try again');
+    } finally { setDecoding(false); }
+  }
+
+  async function onPhotoPick(e) {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (photos.length + files.length > 10) { setError('Maximum 10 photos'); return; }
+    setError(''); setUploading(true);
+    try {
+      for (const f of files) {
+        const res = await api.uploadImage(f);
+        setPhotos((p) => [...p, res]);
+      }
+    } catch (e) { setError(e.message); } finally { setUploading(false); e.target.value = ''; }
+  }
+  function removePhoto(i) { setPhotos((p) => p.filter((_, idx) => idx !== i)); }
+
   async function submit(e) {
     e.preventDefault(); setError(''); setBusy(true);
     try {
@@ -55,15 +97,16 @@ export default function AuctionDetailPage() {
         model: form.model || undefined, year: form.year ? Number(form.year) : undefined,
         serial_number: form.serial_number || undefined, vin: form.vin || undefined,
         usage_value: form.usage_value ? Number(form.usage_value) : undefined,
-        usage_unit: form.usage_value ? form.usage_unit : undefined,
+        usage_unit: form.usage_value ? usageUnit : undefined,
         horsepower: form.horsepower ? Number(form.horsepower) : undefined,
         weight_rating_lbs: form.weight_rating_lbs ? Number(form.weight_rating_lbs) : undefined,
         fuel_type: form.fuel_type || undefined, condition: form.condition || undefined,
         runs: form.runs === '' ? undefined : form.runs === 'yes',
-        starting_bid: form.starting_bid ? Number(form.starting_bid) : 0,
+        reserve_price: form.reserve_price ? Number(form.reserve_price) : undefined,
+        photos: photos.map((p) => p.path),
         parent_listing_id: form.category === 'attachment' && form.parent_listing_id ? form.parent_listing_id : undefined,
       });
-      setForm(empty); await load();
+      setForm(empty); setPhotos([]); await load();
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   }
 
@@ -98,7 +141,17 @@ export default function AuctionDetailPage() {
       <Card className="mb-10">
         <CardHeader><CardTitle>Add Equipment Item</CardTitle></CardHeader>
         <CardContent>
-          <form onSubmit={submit}>
+          <form onSubmit={submit} className="space-y-6">
+            <div className="rounded-md border border-border p-3">
+              <Label>VIN (optional — auto-fills make / model / year)</Label>
+              <div className="mt-1.5 flex gap-2">
+                <Input value={form.vin} onChange={(e) => set('vin', e.target.value)} placeholder="17-character VIN" className="flex-1" />
+                <Button type="button" variant="outline" onClick={decodeVin} disabled={decoding}>
+                  <Search className="h-4 w-4" /> {decoding ? 'Decoding…' : 'Decode VIN'}
+                </Button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
               {field('Title *', <Input value={form.title} onChange={(e) => set('title', e.target.value)} required />)}
               {field('Category', <Select value={form.category} onChange={(e) => set('category', e.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</Select>)}
@@ -107,32 +160,54 @@ export default function AuctionDetailPage() {
               {field('Model', <Input value={form.model} onChange={(e) => set('model', e.target.value)} />)}
               {field('Year', <Input type="number" value={form.year} onChange={(e) => set('year', e.target.value)} />)}
               {field('Serial Number', <Input value={form.serial_number} onChange={(e) => set('serial_number', e.target.value)} />)}
-              {field('VIN', <Input value={form.vin} onChange={(e) => set('vin', e.target.value)} />)}
-              {field('Usage', <Input type="number" value={form.usage_value} onChange={(e) => set('usage_value', e.target.value)} />)}
-              {field('Usage unit', <Select value={form.usage_unit} onChange={(e) => set('usage_unit', e.target.value)}><option value="hours">hours</option><option value="miles">miles</option></Select>)}
+              {field(usageLabel, <Input type="number" value={form.usage_value} onChange={(e) => set('usage_value', e.target.value)} placeholder={usageLabel} />)}
               {field('Horsepower', <Input type="number" value={form.horsepower} onChange={(e) => set('horsepower', e.target.value)} />)}
               {field('Weight (lbs)', <Input type="number" value={form.weight_rating_lbs} onChange={(e) => set('weight_rating_lbs', e.target.value)} />)}
               {field('Fuel type', <Select value={form.fuel_type} onChange={(e) => set('fuel_type', e.target.value)}><option value="">—</option>{FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}</Select>)}
               {field('Condition', <Select value={form.condition} onChange={(e) => set('condition', e.target.value)}><option value="">—</option>{CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}</Select>)}
               {field('Runs?', <Select value={form.runs} onChange={(e) => set('runs', e.target.value)}><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></Select>)}
-              {field('Starting bid ($)', <Input type="number" value={form.starting_bid} onChange={(e) => set('starting_bid', e.target.value)} />)}
+              {field('Reserve price ($)', <Input type="number" value={form.reserve_price} onChange={(e) => set('reserve_price', e.target.value)} placeholder="Min seller will take" />)}
               {form.category === 'attachment' && field('Goes with', <Select value={form.parent_listing_id} onChange={(e) => set('parent_listing_id', e.target.value)}><option value="">—</option>{parentOptions.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</Select>)}
             </div>
-            <Button className="mt-6" disabled={busy}>{busy ? 'Adding…' : 'Add Item'}</Button>
+
+            <div>
+              <Label>Photos (up to 10)</Label>
+              <div className="mt-2 flex flex-wrap gap-3">
+                {photos.map((p, i) => (
+                  <div key={i} className="relative">
+                    <img src={p.path} alt="" className="h-24 w-24 rounded-md object-cover border border-border" />
+                    <button type="button" onClick={() => removePhoto(i)} className="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-destructive text-white">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                {photos.length < 10 && (
+                  <label className="grid h-24 w-24 cursor-pointer place-items-center rounded-md border border-dashed border-border text-muted-foreground hover:border-gold hover:text-gold">
+                    <div className="flex flex-col items-center gap-1 text-xs">
+                      <Upload className="h-5 w-5" />
+                      {uploading ? 'Uploading…' : 'Add'}
+                    </div>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={onPhotoPick} disabled={uploading} />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <Button disabled={busy || uploading}>{busy ? 'Adding…' : 'Add Item'}</Button>
           </form>
         </CardContent>
       </Card>
 
       <h2 className="mb-4 text-2xl">Items ({listings.length})</h2>
       {listings.length === 0 ? (
-        <p className="text-muted-foreground">No lots yet.</p>
+        <p className="text-muted-foreground">No items yet.</p>
       ) : (
         <Card>
           <div className="overflow-x-auto rounded-lg">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-navy text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">Lot</th>
+                  <th className="px-4 py-3 font-medium">Item #</th>
                   <th className="px-4 py-3 font-medium">Title</th>
                   <th className="px-4 py-3 font-medium">Make / Model</th>
                   <th className="px-4 py-3 font-medium">Category</th>
@@ -143,7 +218,7 @@ export default function AuctionDetailPage() {
               <tbody>
                 {listings.map((l) => (
                   <tr key={l.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-3">{l.lot_number ?? '—'}</td>
+                    <td className="px-4 py-3">{l.item_number ?? '—'}</td>
                     <td className="px-4 py-3 font-medium">{l.title}</td>
                     <td className="px-4 py-3 text-muted-foreground">{[l.make, l.model].filter(Boolean).join(' ') || '—'}</td>
                     <td className="px-4 py-3 text-muted-foreground">{l.category}{l.subcategory ? ` / ${l.subcategory}` : ''}</td>
@@ -165,4 +240,17 @@ export default function AuctionDetailPage() {
       )}
     </AppShell>
   );
+}
+
+function toTitle(s) {
+  return String(s).toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+function mapFuel(nhtsa) {
+  if (!nhtsa) return '';
+  const v = nhtsa.toLowerCase();
+  if (v.includes('diesel')) return 'diesel';
+  if (v.includes('gas')) return 'gas';
+  if (v.includes('electric')) return 'electric';
+  if (v.includes('natural')) return 'natural_gas';
+  return '';
 }
