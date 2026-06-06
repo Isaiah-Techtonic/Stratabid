@@ -61,13 +61,21 @@ export default function AuctionDetailPage() {
       const res = await fetch(`https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(vin)}?format=json`);
       const data = await res.json();
       const r = data?.Results?.[0] || {};
-      setForm((f) => ({
-        ...f,
-        make: r.Make ? toTitle(r.Make) : f.make,
-        model: r.Model || f.model,
-        year: r.ModelYear || f.year,
-        fuel_type: mapFuel(r.FuelTypePrimary) || f.fuel_type,
-      }));
+      setForm((f) => {
+        const make = r.Make ? toTitle(r.Make) : f.make;
+        const model = r.Model || f.model;
+        const year = r.ModelYear || f.year;
+        // Auto-generate a title from year/make/model if the user hasn't typed one.
+        const autoTitle = [year, make, model].filter(Boolean).join(' ');
+        const gvwr = r.GVWR && r.GVWR !== 'Not Applicable' ? r.GVWR : f.weight_rating_lbs;
+        return {
+          ...f,
+          make, model, year,
+          fuel_type: mapFuel(r.FuelTypePrimary) || f.fuel_type,
+          title: f.title && f.title.trim() ? f.title : autoTitle,
+          weight_rating_lbs: gvwr,
+        };
+      });
       if (!r.Make && !r.Model) setError('No vehicle data found for that VIN');
     } catch {
       setError('VIN lookup failed — check your connection and try again');
@@ -91,15 +99,18 @@ export default function AuctionDetailPage() {
   async function submit(e) {
     e.preventDefault(); setError(''); setBusy(true);
     try {
+      const finalTitle = form.title && form.title.trim()
+        ? form.title
+        : [form.year, form.make, form.model].filter(Boolean).join(' ');
       await api.createListing({
-        auction_id: id, title: form.title, category: form.category,
+        auction_id: id, title: finalTitle, category: form.category,
         subcategory: form.subcategory || undefined, make: form.make || undefined,
         model: form.model || undefined, year: form.year ? Number(form.year) : undefined,
         serial_number: form.serial_number || undefined, vin: form.vin || undefined,
         usage_value: form.usage_value ? Number(form.usage_value) : undefined,
         usage_unit: form.usage_value ? usageUnit : undefined,
         horsepower: form.horsepower ? Number(form.horsepower) : undefined,
-        weight_rating_lbs: form.weight_rating_lbs ? Number(form.weight_rating_lbs) : undefined,
+        weight_rating_lbs: parseWeight(form.weight_rating_lbs),
         fuel_type: form.fuel_type || undefined, condition: form.condition || undefined,
         runs: form.runs === '' ? undefined : form.runs === 'yes',
         reserve_price: form.reserve_price ? Number(form.reserve_price) : undefined,
@@ -153,7 +164,7 @@ export default function AuctionDetailPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-              {field('Title *', <Input value={form.title} onChange={(e) => set('title', e.target.value)} required />)}
+              {field('Title', <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Auto from year/make/model" />)}
               {field('Category', <Select value={form.category} onChange={(e) => set('category', e.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</Select>)}
               {field('Subcategory', <Input value={form.subcategory} onChange={(e) => set('subcategory', e.target.value)} placeholder="excavator" />)}
               {field('Make', <Input value={form.make} onChange={(e) => set('make', e.target.value)} placeholder="Caterpillar" />)}
@@ -162,7 +173,7 @@ export default function AuctionDetailPage() {
               {field('Serial Number', <Input value={form.serial_number} onChange={(e) => set('serial_number', e.target.value)} />)}
               {field(usageLabel, <Input type="number" value={form.usage_value} onChange={(e) => set('usage_value', e.target.value)} placeholder={usageLabel} />)}
               {field('Horsepower', <Input type="number" value={form.horsepower} onChange={(e) => set('horsepower', e.target.value)} />)}
-              {field('Weight (lbs)', <Input type="number" value={form.weight_rating_lbs} onChange={(e) => set('weight_rating_lbs', e.target.value)} />)}
+              {field('Weight / GVWR', <Input value={form.weight_rating_lbs} onChange={(e) => set('weight_rating_lbs', e.target.value)} placeholder="lbs or GVWR class" />)}
               {field('Fuel type', <Select value={form.fuel_type} onChange={(e) => set('fuel_type', e.target.value)}><option value="">—</option>{FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}</Select>)}
               {field('Condition', <Select value={form.condition} onChange={(e) => set('condition', e.target.value)}><option value="">—</option>{CONDITIONS.map((c) => <option key={c} value={c}>{c}</option>)}</Select>)}
               {field('Runs?', <Select value={form.runs} onChange={(e) => set('runs', e.target.value)}><option value="">—</option><option value="yes">Yes</option><option value="no">No</option></Select>)}
@@ -253,4 +264,13 @@ function mapFuel(nhtsa) {
   if (v.includes('electric')) return 'electric';
   if (v.includes('natural')) return 'natural_gas';
   return '';
+}
+
+function parseWeight(v) {
+  if (v == null || v === '') return undefined;
+  // Pull all numbers; if it's a range/class string, take the largest (the upper bound).
+  const nums = String(v).replace(/,/g, '').match(/\d+/g);
+  if (!nums) return undefined;
+  const max = Math.max(...nums.map(Number));
+  return Number.isFinite(max) ? max : undefined;
 }
