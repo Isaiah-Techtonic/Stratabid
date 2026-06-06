@@ -8,8 +8,11 @@ const CATEGORIES = ['Construction', 'Farm Equipment', 'Commercial Trucks', 'Vehi
 
 export default function PublicLayout({ children }) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, companies } = useAuth();
   const [q, setQ] = useState('');
+  const isAdmin = user?.role === 'admin';
+  const showAdminLink = isAdmin || (companies?.length ?? 0) > 0;
+  const adminTarget = isAdmin ? '/admin' : '/company';
 
   function submitSearch(e) {
     e.preventDefault();
@@ -38,7 +41,12 @@ export default function PublicLayout({ children }) {
           <nav className="flex shrink-0 items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => navigate('/browse')}>Browse</Button>
             {user ? (
-              <Button size="sm" onClick={() => navigate(user.role === 'admin' ? '/admin' : '/home')}>My Account</Button>
+              <>
+                {showAdminLink && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(adminTarget)}>Admin</Button>
+                )}
+                <Button size="sm" onClick={() => navigate('/home')}>My Account</Button>
+              </>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>Sign In</Button>

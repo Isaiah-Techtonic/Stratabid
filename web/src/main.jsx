@@ -13,7 +13,6 @@ import CompanyTeamPage from '@/pages/CompanyTeamPage.jsx';
 import SubmitEquipmentPage from '@/pages/SubmitEquipmentPage.jsx';
 import MyListingsPage from '@/pages/MyListingsPage.jsx';
 import ReviewQueuePage from '@/pages/ReviewQueuePage.jsx';
-import HomePage from '@/pages/public/HomePage.jsx';
 import BrowsePage from '@/pages/public/BrowsePage.jsx';
 import PublicAuctionPage from '@/pages/public/PublicAuctionPage.jsx';
 import PublicListingPage from '@/pages/public/PublicListingPage.jsx';
@@ -39,7 +38,7 @@ function RootRedirect() {
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<BrowsePage />} />
       <Route path="/browse" element={<BrowsePage />} />
       <Route path="/a/:id" element={<PublicAuctionPage />} />
       <Route path="/l/:id" element={<PublicLotPage />} />
