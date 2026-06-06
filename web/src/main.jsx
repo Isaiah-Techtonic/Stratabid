@@ -17,6 +17,8 @@ import HomePage from '@/pages/public/HomePage.jsx';
 import BrowsePage from '@/pages/public/BrowsePage.jsx';
 import PublicAuctionPage from '@/pages/public/PublicAuctionPage.jsx';
 import PublicListingPage from '@/pages/public/PublicListingPage.jsx';
+import PublicLotPage from '@/pages/public/PublicLotPage.jsx';
+import LotComposerPage from '@/pages/LotComposerPage.jsx';
 import '@/index.css';
 
 function Protected({ role, children }) {
@@ -40,7 +42,7 @@ function App() {
       <Route path="/" element={<HomePage />} />
       <Route path="/browse" element={<BrowsePage />} />
       <Route path="/a/:id" element={<PublicAuctionPage />} />
-      <Route path="/l/:id" element={<PublicListingPage />} />
+      <Route path="/l/:id" element={<PublicLotPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/account" element={<Protected><AccountPage /></Protected>} />
@@ -50,6 +52,7 @@ function App() {
       <Route path="/submit" element={<Protected><SubmitEquipmentPage /></Protected>} />
       <Route path="/my-listings" element={<Protected><MyListingsPage /></Protected>} />
       <Route path="/auctions/:id/review" element={<Protected><ReviewQueuePage /></Protected>} />
+      <Route path="/auctions/:id/lots" element={<Protected><LotComposerPage /></Protected>} />
       <Route path="/admin" element={<Protected role="admin"><AdminPage /></Protected>} />
       <Route path="/auctions/:id" element={<Protected role="admin"><AuctionDetailPage /></Protected>} />
       <Route path="*" element={<RootRedirect />} />

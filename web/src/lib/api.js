@@ -71,6 +71,17 @@ export const api = {
   reviewQueue: (auctionId) => request(`/listings/review-queue?auction_id=${auctionId}`),
   reviewListing: (id, payload) =>
     request(`/listings/${id}/review`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  // ---- lots (company composition) ----
+  lots: (auctionId) => request(`/lots?auction_id=${auctionId}`),
+  unassignedItems: (auctionId) => request(`/lots/unassigned?auction_id=${auctionId}`),
+  createLot: (payload) => request('/lots', { method: 'POST', body: JSON.stringify(payload) }),
+  assignItems: (lotId, itemIds) =>
+    request(`/lots/${lotId}/items`, { method: 'POST', body: JSON.stringify({ item_ids: itemIds }) }),
+  removeItemFromLot: (lotId, itemId) =>
+    request(`/lots/${lotId}/items/${itemId}`, { method: 'DELETE' }),
+  updateLot: (lotId, payload) => request(`/lots/${lotId}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  deleteLot: (lotId) => request(`/lots/${lotId}`, { method: 'DELETE' }),
+  pubLotDetail: (id) => request(`/public/lots/${id}`),
   uploadImage: async (file) => {
     const token = localStorage.getItem('stratabid_token');
     const fd = new FormData();

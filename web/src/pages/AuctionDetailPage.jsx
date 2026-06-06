@@ -81,12 +81,13 @@ export default function AuctionDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Button>
       <div className="mb-8">
-        <h1 className="text-3xl">Auction Lots</h1>
-        <p className="mt-1 text-muted-foreground">Manage equipment listings for this auction.</p>
+        <h1 className="text-3xl">Auction Items</h1>
+        <p className="mt-1 text-muted-foreground">Add and review equipment items, then organize them into lots.</p>
       </div>
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => navigate(`/auctions/${id}/review`)}>Review Queue</Button>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/auctions/${id}/lots`)}>Organize Lots</Button>
         <Button variant={openFlag ? 'default' : 'outline'} size="sm" onClick={toggleOpen}>
           {openFlag ? 'Open for submissions ✓' : 'Open for submissions'}
         </Button>
@@ -95,7 +96,7 @@ export default function AuctionDetailPage() {
       {error && <div className="mb-6 rounded-md border border-destructive bg-destructive/10 px-4 py-3 text-sm text-red-300">{error}</div>}
 
       <Card className="mb-10">
-        <CardHeader><CardTitle>Add Equipment Lot</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Add Equipment Item</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={submit}>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -117,12 +118,12 @@ export default function AuctionDetailPage() {
               {field('Starting bid ($)', <Input type="number" value={form.starting_bid} onChange={(e) => set('starting_bid', e.target.value)} />)}
               {form.category === 'attachment' && field('Goes with', <Select value={form.parent_listing_id} onChange={(e) => set('parent_listing_id', e.target.value)}><option value="">—</option>{parentOptions.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}</Select>)}
             </div>
-            <Button className="mt-6" disabled={busy}>{busy ? 'Adding…' : 'Add Lot'}</Button>
+            <Button className="mt-6" disabled={busy}>{busy ? 'Adding…' : 'Add Item'}</Button>
           </form>
         </CardContent>
       </Card>
 
-      <h2 className="mb-4 text-2xl">Lots ({listings.length})</h2>
+      <h2 className="mb-4 text-2xl">Items ({listings.length})</h2>
       {listings.length === 0 ? (
         <p className="text-muted-foreground">No lots yet.</p>
       ) : (

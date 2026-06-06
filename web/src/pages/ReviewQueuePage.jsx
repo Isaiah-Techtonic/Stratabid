@@ -45,7 +45,7 @@ export default function ReviewQueuePage() {
       </Button>
       <div className="mb-8">
         <h1 className="text-3xl">Review Queue</h1>
-        <p className="mt-1 text-muted-foreground">Submitted equipment awaiting your approval.</p>
+        <p className="mt-1 text-muted-foreground">Submitted items awaiting your approval.</p>
       </div>
 
       {error && <div className="mb-6 rounded-md border border-destructive bg-destructive/10 px-4 py-3 text-sm text-red-300">{error}</div>}

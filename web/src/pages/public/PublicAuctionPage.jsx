@@ -55,14 +55,13 @@ export default function PublicAuctionPage() {
             {lots.map((l) => (
               <Card key={l.id} className="cursor-pointer transition-colors hover:border-gold" onClick={() => navigate(`/l/${l.id}`)}>
                 <div className="aspect-square w-full overflow-hidden rounded-t-lg bg-navy">
-                  {l.photos?.[0]
-                    ? <img src={l.photos[0]} alt="" className="h-full w-full object-cover" />
+                  {l.cover_photo
+                    ? <img src={l.cover_photo} alt="" className="h-full w-full object-cover" />
                     : <div className="flex h-full items-center justify-center"><Package className="h-8 w-8 opacity-30 text-muted-foreground" /></div>}
                 </div>
                 <CardContent className="pt-3">
-                  {l.lot_number != null && <span className="text-xs uppercase tracking-wide text-muted-foreground">Lot {l.lot_number}</span>}
-                  <h3 className="text-base leading-tight">{l.title}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{[l.make, l.model, l.year].filter(Boolean).join(' ')}</p>
+                  {l.lot_number != null && <span className="text-xs uppercase tracking-wide text-muted-foreground">Lot {l.lot_number}{l.item_count > 1 ? ` · ${l.item_count} items` : ''}</span>}
+                  <h3 className="text-base leading-tight">{l.display_title}</h3>
                   <p className="mt-2 text-sm">Starting: <span className="text-gold">${l.starting_bid ?? 0}</span></p>
                 </CardContent>
               </Card>
