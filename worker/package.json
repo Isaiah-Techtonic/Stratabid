@@ -1,0 +1,6 @@
+{
+  "name": "stratabid-worker",
+  "version": "0.1.0",
+  "scripts": { "start": "node index.js" },
+  "dependencies": {}
+}

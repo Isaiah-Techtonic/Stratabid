@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model auction_companies {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String
+  owner_email     String          @db.Citext
+  phone           String?
+  address         String?
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime        @default(now()) @db.Timestamptz(6)
+  logo_url        String?
+  primary_color   String?         @default("#1e3a5f")
+  secondary_color String?         @default("#d97706")
+  website         String?
+  city            String?
+  state           String?
+  zip_code        String?
+  status          company_status  @default(pending)
+  auctions        auctions[]
+  company_users   company_users[]
+}
+
+model auction_financials {
+  auction_id        String          @id @db.Uuid
+  commission_type   commission_type @default(percentage)
+  commission_rate   Decimal?        @db.Decimal(6, 4)
+  commission_flat   Decimal?        @db.Decimal(14, 2)
+  buyer_premium_pct Decimal         @default(0) @db.Decimal(6, 4)
+  tax_pct           Decimal         @default(0) @db.Decimal(6, 4)
+  internal_notes    String?
+  updated_at        DateTime        @default(now()) @db.Timestamptz(6)
+  auctions          auctions        @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model auction_notification_subscriptions {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id         String    @db.Uuid
+  auction_id      String?   @db.Uuid
+  notify_outbid   Boolean   @default(true)
+  notify_starting Boolean   @default(true)
+  notify_won      Boolean   @default(true)
+  created_at      DateTime  @default(now()) @db.Timestamptz(6)
+  auctions        auctions? @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users           users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([user_id, auction_id])
+}
+
+model auction_registrations {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auction_id    String              @db.Uuid
+  user_id       String              @db.Uuid
+  status        registration_status @default(pending)
+  bidder_number Int?
+  created_at    DateTime            @default(now()) @db.Timestamptz(6)
+  full_name     String?
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  zip_code      String?
+  auctions      auctions            @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users         users               @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([auction_id, bidder_number])
+  @@unique([auction_id, user_id])
+  @@index([auction_id], map: "idx_registrations_auction")
+  @@index([user_id], map: "idx_registrations_user")
+}
+
+model auctions {
+  id                                                             String                               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id                                                     String                               @db.Uuid
+  title                                                          String
+  description                                                    String?
+  format                                                         auction_format                       @default(timed)
+  status                                                         auction_status                       @default(draft)
+  starts_at                                                      DateTime?                            @db.Timestamptz(6)
+  ends_at                                                        DateTime?                            @db.Timestamptz(6)
+  anti_snipe_secs                                                Int                                  @default(120)
+  created_at                                                     DateTime                             @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime                             @default(now()) @db.Timestamptz(6)
+  location_city                                                  String?
+  location_state                                                 String?
+  location_address                                               String?
+  zip_code                                                       String?
+  cover_image_url                                                String?
+  youtube_stream_url                                             String?
+  current_lot_id                                                 String?                              @db.Uuid
+  auction_financials                                             auction_financials?
+  auction_notification_subscriptions                             auction_notification_subscriptions[]
+  auction_registrations                                          auction_registrations[]
+  auction_companies                                              auction_companies                    @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  equipment_listings_auctions_current_lot_idToequipment_listings equipment_listings?                  @relation("auctions_current_lot_idToequipment_listings", fields: [current_lot_id], references: [id], onUpdate: NoAction)
+  equipment_listings                                             equipment_listings[]
+
+  @@index([company_id], map: "idx_auctions_company")
+  @@index([status], map: "idx_auctions_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model bids {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id         String             @db.Uuid
+  bidder_id          String             @db.Uuid
+  amount             Decimal            @db.Decimal(14, 2)
+  origin             bid_origin         @default(online)
+  max_amount         Decimal?           @db.Decimal(14, 2)
+  created_at         DateTime           @default(now()) @db.Timestamptz(6)
+  users              users              @relation(fields: [bidder_id], references: [id], onUpdate: NoAction)
+  equipment_listings equipment_listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  settlements        settlements[]
+
+  @@index([bidder_id], map: "idx_bids_bidder")
+  @@index([listing_id, amount(sort: Desc)], map: "idx_bids_listing_amount")
+}
+
+model company_users {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  company_id        String            @db.Uuid
+  user_id           String            @db.Uuid
+  role              company_user_role @default(staff)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  auction_companies auction_companies @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users             users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([company_id, user_id])
+  @@index([company_id], map: "idx_company_users_company")
+  @@index([user_id], map: "idx_company_users_user")
+}
+
+model equipment_listings {
+  id                                                   String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auction_id                                           String?              @db.Uuid
+  consignor_id                                         String               @db.Uuid
+  lot_number                                           Int?
+  title                                                String
+  description                                          String?
+  category                                             listing_category     @default(equipment)
+  status                                               listing_status       @default(submitted)
+  starting_bid                                         Decimal              @default(0) @db.Decimal(14, 2)
+  reserve_price                                        Decimal?             @db.Decimal(14, 2)
+  photos                                               Json                 @default("[]")
+  created_at                                           DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at                                           DateTime             @default(now()) @db.Timestamptz(6)
+  make                                                 String?
+  model                                                String?
+  year                                                 Int?
+  serial_number                                        String?
+  vin                                                  String?
+  subcategory                                          String?
+  usage_value                                          Decimal?             @db.Decimal(12, 1)
+  usage_unit                                           usage_unit?
+  horsepower                                           Int?
+  weight_rating_lbs                                    Int?
+  fuel_type                                            fuel_type?
+  condition                                            listing_condition?
+  runs                                                 Boolean?
+  current_bid                                          Decimal?             @db.Decimal(14, 2)
+  winning_bidder_id                                    String?              @db.Uuid
+  parent_listing_id                                    String?              @db.Uuid
+  auctions_auctions_current_lot_idToequipment_listings auctions[]           @relation("auctions_current_lot_idToequipment_listings")
+  bids                                                 bids[]
+  auctions                                             auctions?            @relation(fields: [auction_id], references: [id], onUpdate: NoAction)
+  users                                                users                @relation(fields: [consignor_id], references: [id], onUpdate: NoAction)
+  equipment_listings                                   equipment_listings?  @relation("equipment_listingsToequipment_listings", fields: [parent_listing_id], references: [id], onUpdate: NoAction)
+  other_equipment_listings                             equipment_listings[] @relation("equipment_listingsToequipment_listings")
+  users_equipment_listings_winning_bidder_idTousers    users?               @relation("equipment_listings_winning_bidder_idTousers", fields: [winning_bidder_id], references: [id], onUpdate: NoAction)
+  settlements                                          settlements?
+
+  @@unique([auction_id, lot_number])
+  @@index([auction_id], map: "idx_listings_auction")
+  @@index([consignor_id], map: "idx_listings_consignor")
+  @@index([status], map: "idx_listings_status")
+  @@index([parent_listing_id], map: "idx_listings_parent")
+}
+
+model settlements {
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id          String             @unique @db.Uuid
+  winning_bid_id      String?            @db.Uuid
+  final_sale_price    Decimal?           @db.Decimal(14, 2)
+  buyer_premium       Decimal?           @db.Decimal(14, 2)
+  tax_amount          Decimal?           @db.Decimal(14, 2)
+  commission_amount   Decimal?           @db.Decimal(14, 2)
+  commission_override Decimal?           @db.Decimal(14, 2)
+  net_to_consignor    Decimal?           @db.Decimal(14, 2)
+  net_override        Decimal?           @db.Decimal(14, 2)
+  settlement_notes    String?
+  status              settlement_status  @default(draft)
+  created_at          DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime           @default(now()) @db.Timestamptz(6)
+  equipment_listings  equipment_listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  bids                bids?              @relation(fields: [winning_bid_id], references: [id], onUpdate: NoAction)
+}
+
+model users {
+  id                                                             String                               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                                                          String                               @unique @db.Citext
+  full_name                                                      String
+  role                                                           user_role                            @default(user)
+  phone                                                          String?
+  created_at                                                     DateTime                             @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime                             @default(now()) @db.Timestamptz(6)
+  password_hash                                                  String?
+  address                                                        String?
+  city                                                           String?
+  state                                                          String?
+  zip_code                                                       String?
+  profile_picture_url                                            String?
+  auction_notification_subscriptions                             auction_notification_subscriptions[]
+  auction_registrations                                          auction_registrations[]
+  bids                                                           bids[]
+  company_users                                                  company_users[]
+  equipment_listings                                             equipment_listings[]
+  equipment_listings_equipment_listings_winning_bidder_idTousers equipment_listings[]                 @relation("equipment_listings_winning_bidder_idTousers")
+}
+
+enum auction_format {
+  timed
+  live_webcast
+}
+
+enum auction_status {
+  draft
+  scheduled
+  live
+  paused
+  completed
+  cancelled
+}
+
+enum bid_origin {
+  online
+  floor
+  absentee
+  proxy
+}
+
+enum commission_type {
+  percentage
+  flat
+}
+
+enum company_user_role {
+  owner
+  manager
+  staff
+}
+
+enum listing_category {
+  vehicle
+  trailer
+  equipment
+  other
+}
+
+enum listing_status {
+  submitted
+  approved
+  rejected
+  withdrawn
+  sold
+  passed
+}
+
+enum registration_status {
+  pending
+  approved
+  denied
+  suspended
+}
+
+enum settlement_status {
+  draft
+  finalized
+  paid
+}
+
+enum user_role {
+  admin
+  user
+}
+
+enum fuel_type {
+  diesel
+  gas
+  kerosene
+  natural_gas
+  electric
+  other
+  none
+}
+
+enum listing_condition {
+  excellent
+  good
+  fair
+  poor
+}
+
+enum usage_unit {
+  hours
+  miles
+}
+
+enum company_status {
+  pending
+  approved
+  suspended
+}

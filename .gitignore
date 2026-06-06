@@ -1,0 +1,10 @@
+.env
+node_modules/
+dist/
+api/node_modules/
+web/node_modules/
+web/dist/
+nginx/certbot/conf/
+nginx/certbot/www/
+*.tar.gz
+.DS_Store

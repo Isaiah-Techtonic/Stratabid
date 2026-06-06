@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark navy is the default theme. HSL values. */
+    --background: 222 47% 11%;        /* slate-900 / navy deep #0f172a */
+    --foreground: 210 40% 98%;        /* slate-50 */
+    --card: 217 33% 17%;              /* slate-800 #1e293b */
+    --card-foreground: 210 40% 98%;
+    --primary: 213 51% 25%;           /* navy #1e3a5f */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 25% 27%;         /* slate-700 */
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;  /* slate-400 */
+    --accent: 32 95% 44%;             /* gold #d97706 */
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;         /* red-600 */
+    --destructive-foreground: 210 40% 98%;
+    --border: 215 25% 27%;            /* slate-700 */
+    --input: 215 25% 27%;
+    --ring: 32 95% 44%;               /* gold focus ring */
+    --radius: 0.625rem;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground font-body;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, .display { @apply font-display uppercase tracking-wide; }
+}
+
+/* Subtle atmospheric background: faint diagonal navy gradient + grain feel */
+body {
+  background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(217,119,6,0.06), transparent),
+    linear-gradient(180deg, #0f172a 0%, #0c1322 100%);
+  background-attachment: fixed;
+}

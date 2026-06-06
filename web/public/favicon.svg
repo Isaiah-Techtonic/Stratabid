@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Gavel (simplified, one diagonal) -->
+  <g transform="translate(4.5 16.5) rotate(-35)" fill="#22304a">
+    <rect x="0" y="-2.1" width="16" height="4.2" rx="2.1"/>
+    <rect x="13.5" y="-4.1" width="12.5" height="8.2" rx="2.6"/>
+  </g>
+  <!-- Strata layer 1 (gray) split by crack -->
+  <path d="M2.5 17.8 L14.4 22.6 L14.4 25.0 L2.5 20.2 Z" fill="#9aa3ad"/>
+  <path d="M29.5 17.8 L17.6 22.6 L17.6 25.0 L29.5 20.2 Z" fill="#9aa3ad"/>
+  <!-- Strata layer 2 (orange) split by crack -->
+  <path d="M2.5 21.2 L14.4 26.0 L14.4 29.6 L2.5 24.8 Z" fill="#F5821F"/>
+  <path d="M29.5 21.2 L17.6 26.0 L17.6 29.6 L29.5 24.8 Z" fill="#F5821F"/>
+</svg>
