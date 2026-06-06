@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+import { NumberingService } from './numbering.service';
 
 const PUBLIC_SELECT = {
   id: true, auction_id: true, consignor_id: true, lot_number: true,
@@ -14,7 +15,7 @@ type Actor = { sub: string; email: string; role: string };
 
 @Injectable()
 export class ListingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private numbering: NumberingService) {}
 
   async findByAuction(auctionId: string) {
     return this.prisma.equipment_listings.findMany({
@@ -115,10 +116,20 @@ export class ListingsService {
     await this.assertCanReviewAuction(actor, listing.auction_id);
 
     const data: any = { status: decision };
-    if (decision === 'approved' && overrides) {
-      if (overrides.starting_bid != null) data.starting_bid = overrides.starting_bid;
-      if (overrides.reserve_price != null) data.reserve_price = overrides.reserve_price;
-      if (overrides.lot_number != null) data.lot_number = overrides.lot_number;
+    if (decision === 'approved') {
+      // Reserve may be adjusted at approval; starting bid is no longer used.
+      if (overrides?.reserve_price != null) data.reserve_price = overrides.reserve_price;
+      // Assign an item number if it doesn't already have one.
+      const existing = await this.prisma.equipment_listings.findUnique({
+        where: { id: listingId }, select: { item_number: true },
+      });
+      if (existing && existing.item_number == null) {
+        if (overrides?.item_number != null) {
+          data.item_number = overrides.item_number; // manual
+        } else {
+          data.item_number = await this.numbering.nextItemNumber(listing.auction_id);
+        }
+      }
     }
     return this.prisma.equipment_listings.update({
       where: { id: listingId }, data, select: PUBLIC_SELECT,

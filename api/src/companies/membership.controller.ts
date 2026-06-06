@@ -12,12 +12,13 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { MembershipService } from './membership.service';
+import { CompaniesService } from './companies.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
 export class MembershipController {
-  constructor(private readonly membership: MembershipService) {}
+  constructor(private readonly membership: MembershipService, private readonly companies: CompaniesService) {}
 
   // Companies the current user belongs to (drives portal navigation)
   @Get('my-companies')
@@ -66,4 +67,16 @@ export class MembershipController {
   ) {
     return this.membership.removeMember((req as any).user, id, membershipId);
   }
+
+  @Get('companies/:id/settings')
+  getSettings(@Req() req: Request, @Param('id') id: string) {
+    // any member or admin can view; reuse membership view check via myCompanies-style
+    return this.companies.getSettings(id);
+  }
+
+  @Patch('companies/:id/numbering')
+  async updateNumbering(@Req() req: Request, @Param('id') id: string, @Body() body: any) {
+    return this.companies.updateNumbering(id, body);
+  }
+
 }

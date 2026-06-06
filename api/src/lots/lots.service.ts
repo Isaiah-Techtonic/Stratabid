@@ -37,7 +37,7 @@ export class LotsService {
       orderBy: [{ sort_order: 'asc' }, { lot_number: 'asc' }],
       select: {
         id: true, lot_number: true, title: true, description: true, status: true,
-        starting_bid: true, reserve_price: true, sort_order: true,
+        sale_mode: true, reserve_price: true, sort_order: true,
         equipment_listings: { select: ITEM_PUBLIC },
       },
     });
@@ -52,14 +52,15 @@ export class LotsService {
   }
 
   // Create a lot (optionally with a title/desc + initial item ids to place in it).
-  async createLot(actor: Actor, auctionId: string, data: { title?: string; description?: string; starting_bid?: number; reserve_price?: number; item_ids?: string[] }) {
+  async createLot(actor: Actor, auctionId: string, data: { title?: string; description?: string; sale_mode?: string; reserve_price?: number; item_ids?: string[] }) {
     await this.assertManages(actor, auctionId);
     const lot_number = await this.nextLotNumber(auctionId);
     const lot = await this.prisma.lots.create({
       data: {
         auction_id: auctionId, lot_number, sort_order: lot_number,
         title: data.title ?? null, description: data.description ?? null,
-        starting_bid: data.starting_bid ?? 0, reserve_price: data.reserve_price ?? null,
+        sale_mode: (data.sale_mode === 'bulk' ? 'bulk' : 'individual') as any,
+        reserve_price: data.reserve_price ?? null,
       },
       select: { id: true, lot_number: true },
     });
@@ -113,7 +114,8 @@ export class LotsService {
       where: { id: lotId },
       data: {
         title: data.title ?? undefined, description: data.description ?? undefined,
-        starting_bid: data.starting_bid ?? undefined, reserve_price: data.reserve_price ?? undefined,
+        reserve_price: data.reserve_price ?? undefined,
+        sale_mode: data.sale_mode ? (data.sale_mode === 'bulk' ? 'bulk' : 'individual') as any : undefined,
         sort_order: data.sort_order ?? undefined,
       },
       select: { id: true, lot_number: true, title: true, starting_bid: true, sort_order: true },

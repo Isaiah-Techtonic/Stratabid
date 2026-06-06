@@ -23,4 +23,25 @@ export class CompaniesService {
       orderBy: { created_at: 'desc' },
     });
   }
+
+  async getSettings(id: string) {
+    const c = await this.prisma.auction_companies.findUnique({
+      where: { id },
+      select: { id: true, name: true, numbering_mode: true, numbering_start: true, numbering_prefix: true },
+    });
+    return c;
+  }
+
+  async updateNumbering(id: string, data: { numbering_mode?: string; numbering_start?: number; numbering_prefix?: boolean }) {
+    return this.prisma.auction_companies.update({
+      where: { id },
+      data: {
+        numbering_mode: data.numbering_mode === 'manual' ? 'manual' : (data.numbering_mode === 'auto' ? 'auto' : undefined),
+        numbering_start: data.numbering_start ?? undefined,
+        numbering_prefix: typeof data.numbering_prefix === 'boolean' ? data.numbering_prefix : undefined,
+      },
+      select: { id: true, numbering_mode: true, numbering_start: true, numbering_prefix: true },
+    });
+  }
+
 }
