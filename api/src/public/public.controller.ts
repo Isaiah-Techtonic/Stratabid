@@ -1,7 +1,6 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { PublicService } from './public.service';
 
-// All endpoints here are PUBLIC — no auth guard. Only published content.
 @Controller('public')
 export class PublicController {
   constructor(private readonly pub: PublicService) {}
@@ -12,22 +11,14 @@ export class PublicController {
   }
 
   @Get('featured')
-  featured() {
-    return this.pub.featured();
-  }
+  featured() { return this.pub.featured(); }
 
   @Get('auctions/:id')
-  auctionDetail(@Param('id') id: string) {
-    return this.pub.auctionDetail(id);
-  }
+  auctionDetail(@Param('id') id: string) { return this.pub.auctionDetail(id); }
 
-  @Get('listings/:id')
-  listingDetail(@Param('id') id: string) {
-    return this.pub.listingDetail(id);
-  }
+  @Get('lots/:id')
+  lotDetail(@Param('id') id: string) { return this.pub.lotDetail(id); }
 
   @Get('search')
-  search(@Query('q') q: string) {
-    return this.pub.searchListings(q);
-  }
+  search(@Query('q') q: string) { return this.pub.searchLots(q); }
 }

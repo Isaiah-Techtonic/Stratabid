@@ -101,6 +101,7 @@ model auctions {
   auction_companies                                              auction_companies                    @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   equipment_listings_auctions_current_lot_idToequipment_listings equipment_listings?                  @relation("auctions_current_lot_idToequipment_listings", fields: [current_lot_id], references: [id], onUpdate: NoAction)
   equipment_listings                                             equipment_listings[]
+  lots                                                           lots[]
 
   @@index([company_id], map: "idx_auctions_company")
   @@index([status], map: "idx_auctions_status")
@@ -167,10 +168,13 @@ model equipment_listings {
   current_bid                                          Decimal?             @db.Decimal(14, 2)
   winning_bidder_id                                    String?              @db.Uuid
   parent_listing_id                                    String?              @db.Uuid
+  lot_id                                               String?              @db.Uuid
+  created_by_company                                   Boolean              @default(false)
   auctions_auctions_current_lot_idToequipment_listings auctions[]           @relation("auctions_current_lot_idToequipment_listings")
   bids                                                 bids[]
   auctions                                             auctions?            @relation(fields: [auction_id], references: [id], onUpdate: NoAction)
   users                                                users                @relation(fields: [consignor_id], references: [id], onUpdate: NoAction)
+  lots                                                 lots?                @relation(fields: [lot_id], references: [id], onUpdate: NoAction)
   equipment_listings                                   equipment_listings?  @relation("equipment_listingsToequipment_listings", fields: [parent_listing_id], references: [id], onUpdate: NoAction)
   other_equipment_listings                             equipment_listings[] @relation("equipment_listingsToequipment_listings")
   users_equipment_listings_winning_bidder_idTousers    users?               @relation("equipment_listings_winning_bidder_idTousers", fields: [winning_bidder_id], references: [id], onUpdate: NoAction)
@@ -181,6 +185,7 @@ model equipment_listings {
   @@index([consignor_id], map: "idx_listings_consignor")
   @@index([status], map: "idx_listings_status")
   @@index([parent_listing_id], map: "idx_listings_parent")
+  @@index([lot_id], map: "idx_listings_lot")
 }
 
 model settlements {
@@ -222,6 +227,7 @@ model users {
   company_users                                                  company_users[]
   equipment_listings                                             equipment_listings[]
   equipment_listings_equipment_listings_winning_bidder_idTousers equipment_listings[]                 @relation("equipment_listings_winning_bidder_idTousers")
+  lots                                                           lots[]
 }
 
 model migrations {
@@ -229,6 +235,29 @@ model migrations {
   applied_at DateTime? @default(now()) @db.Timestamptz(6)
 
   @@map("_migrations")
+}
+
+model lots {
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auction_id         String               @db.Uuid
+  lot_number         Int?
+  title              String?
+  description        String?
+  status             lot_status           @default(draft)
+  starting_bid       Decimal              @default(0) @db.Decimal(14, 2)
+  reserve_price      Decimal?             @db.Decimal(14, 2)
+  current_bid        Decimal?             @db.Decimal(14, 2)
+  winning_bidder_id  String?              @db.Uuid
+  sort_order         Int                  @default(0)
+  created_at         DateTime             @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime             @default(now()) @db.Timestamptz(6)
+  equipment_listings equipment_listings[]
+  auctions           auctions             @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users              users?               @relation(fields: [winning_bidder_id], references: [id], onUpdate: NoAction)
+
+  @@unique([auction_id, lot_number])
+  @@index([auction_id], map: "idx_lots_auction")
+  @@index([status], map: "idx_lots_status")
 }
 
 enum auction_format {
@@ -323,4 +352,13 @@ enum company_status {
   pending
   approved
   suspended
+}
+
+enum lot_status {
+  draft
+  open
+  live
+  sold
+  passed
+  closed
 }
