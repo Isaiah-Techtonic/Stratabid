@@ -5,7 +5,6 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // On boot, if we have a token, fetch the current user to restore the session.
@@ -21,13 +20,6 @@ export function AuthProvider({ children }) {
       .catch(() => clearToken())
       .finally(() => setLoading(false));
   }, []);
-
-  // Fetch company memberships whenever the user changes — used by the header
-  // to decide whether to surface the Admin link for non-admin company members.
-  useEffect(() => {
-    if (!user) { setCompanies([]); return; }
-    api.myCompanies().then(setCompanies).catch(() => setCompanies([]));
-  }, [user]);
 
   async function login(email, password) {
     const res = await api.login(email, password);
@@ -46,11 +38,10 @@ export function AuthProvider({ children }) {
   function logout() {
     clearToken();
     setUser(null);
-    setCompanies([]);
   }
 
   return (
-    <AuthContext.Provider value={{ user, companies, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

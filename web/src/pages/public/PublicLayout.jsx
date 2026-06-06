@@ -8,11 +8,9 @@ const CATEGORIES = ['Construction', 'Farm Equipment', 'Commercial Trucks', 'Vehi
 
 export default function PublicLayout({ children }) {
   const navigate = useNavigate();
-  const { user, companies } = useAuth();
+  const { user } = useAuth();
   const [q, setQ] = useState('');
   const isAdmin = user?.role === 'admin';
-  const showAdminLink = isAdmin || (companies?.length ?? 0) > 0;
-  const adminTarget = isAdmin ? '/admin' : '/company';
 
   function submitSearch(e) {
     e.preventDefault();
@@ -42,8 +40,8 @@ export default function PublicLayout({ children }) {
             <Button variant="ghost" size="sm" onClick={() => navigate('/browse')}>Browse</Button>
             {user ? (
               <>
-                {showAdminLink && (
-                  <Button variant="ghost" size="sm" onClick={() => navigate(adminTarget)}>Admin</Button>
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate('/admin')}>Admin</Button>
                 )}
                 <Button size="sm" onClick={() => navigate('/home')}>My Account</Button>
               </>
