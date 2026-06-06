@@ -12,7 +12,7 @@ export default function AppShell({ children }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-50 border-b border-border bg-navy-deep/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/home')} className="flex items-center gap-2.5">
+          <button onClick={() => navigate('/')} className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-md bg-gold">
               <Gavel className="h-5 w-5 text-navy-deep" />
             </span>
