@@ -36,18 +36,18 @@ export class BiddingService {
   }
 
   // Public lot bidding state (no hidden max revealed).
-  async lotState(lotId: string) {
-    const lot = await this.prisma.lots.findUnique({
-      where: { id: lotId },
+  async itemState(itemId: string) {
+    const item = await this.prisma.equipment_listings.findUnique({
+      where: { id: itemId },
       select: {
-        id: true, lot_number: true, status: true, current_bid: true,
+        id: true, item_number: true, title: true, status: true, current_bid: true,
         reserve_price: true, reserve_met: true, bid_count: true, ends_at: true,
         winning_bidder_id: true, auction_id: true,
         auctions: { select: { id: true, status: true } },
       },
     });
-    if (!lot) throw new NotFoundException('Lot not found');
-    return lot;
+    if (!item) throw new NotFoundException('Item not found');
+    return item;
   }
 
   /**
@@ -63,7 +63,7 @@ export class BiddingService {
    *  - if leader's max still >= bidder's max: leader stays, price = one increment
    *    above bidder's max (capped at leader's max)
    */
-  async placeBid(actor: Actor, lotId: string, maxAmount: number) {
+  async placeBid(actor: Actor, itemId: string, maxAmount: number) {
     if (!(maxAmount > 0)) throw new BadRequestException('Bid amount must be positive');
 
     return this.prisma.$transaction(async (tx) => {
@@ -71,9 +71,9 @@ export class BiddingService {
       const locked = await tx.$queryRaw<any[]>(
         Prisma.sql`SELECT id, auction_id, status, current_bid, current_max_bid,
                           winning_bidder_id, reserve_price, ends_at, bid_count
-                   FROM lots WHERE id = ${lotId}::uuid FOR UPDATE`,
+                   FROM equipment_listings WHERE id = ${itemId}::uuid FOR UPDATE`,
       );
-      if (!locked.length) throw new NotFoundException('Lot not found');
+      if (!locked.length) throw new NotFoundException('Item not found');
       const lot = locked[0];
 
       // Auction/lot must be live to accept bids.
@@ -150,7 +150,7 @@ export class BiddingService {
       // Record the bid (the actor's own max).
       await tx.bids.create({
         data: {
-          lot_id: lotId, bidder_id: actor.sub,
+          item_id: itemId, bidder_id: actor.sub,
           amount: new Prisma.Decimal(newPrice),
           max_amount: new Prisma.Decimal(maxAmount),
           origin: 'online',
@@ -158,8 +158,8 @@ export class BiddingService {
       });
 
       // Update the lot's authoritative state.
-      await tx.lots.update({
-        where: { id: lotId },
+      await tx.equipment_listings.update({
+        where: { id: itemId },
         data: {
           current_bid: new Prisma.Decimal(newPrice),
           current_max_bid: new Prisma.Decimal(newMax),
@@ -171,7 +171,7 @@ export class BiddingService {
       });
 
       return {
-        lot_id: lotId,
+        item_id: itemId,
         current_bid: newPrice,
         you_are_winning: newLeader === actor.sub,
         reserve_met: reserveMet,
@@ -181,9 +181,9 @@ export class BiddingService {
   }
 
   // A bidder's bid history on a lot (their own bids only).
-  async myBids(actor: Actor, lotId: string) {
+  async myBids(actor: Actor, itemId: string) {
     return this.prisma.bids.findMany({
-      where: { lot_id: lotId, bidder_id: actor.sub },
+      where: { item_id: itemId, bidder_id: actor.sub },
       select: { id: true, amount: true, max_amount: true, created_at: true },
       orderBy: { created_at: 'desc' },
     });

@@ -86,8 +86,8 @@ export class AuctionsService {
     await this.prisma.auctions.update({ where: { id: auctionId }, data: { status: status as any } });
     // Going live: set ends_at on any lot that doesn't have one yet, from the auction end.
     if (status === 'live' && auction.ends_at) {
-      await this.prisma.lots.updateMany({
-        where: { auction_id: auctionId, ends_at: null },
+      await this.prisma.equipment_listings.updateMany({
+        where: { auction_id: auctionId, ends_at: null, status: 'approved' },
         data: { ends_at: auction.ends_at },
       });
     }

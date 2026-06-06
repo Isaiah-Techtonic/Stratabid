@@ -113,22 +113,25 @@ model auctions {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model bids {
-  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  listing_id         String?             @db.Uuid
-  bidder_id          String              @db.Uuid
-  amount             Decimal             @db.Decimal(14, 2)
-  origin             bid_origin          @default(online)
-  max_amount         Decimal?            @db.Decimal(14, 2)
-  created_at         DateTime            @default(now()) @db.Timestamptz(6)
-  lot_id             String?             @db.Uuid
-  users              users               @relation(fields: [bidder_id], references: [id], onUpdate: NoAction)
-  equipment_listings equipment_listings? @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  lots               lots?               @relation(fields: [lot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  settlements        settlements[]
+  id                                                  String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id                                          String?             @db.Uuid
+  bidder_id                                           String              @db.Uuid
+  amount                                              Decimal             @db.Decimal(14, 2)
+  origin                                              bid_origin          @default(online)
+  max_amount                                          Decimal?            @db.Decimal(14, 2)
+  created_at                                          DateTime            @default(now()) @db.Timestamptz(6)
+  lot_id                                              String?             @db.Uuid
+  item_id                                             String?             @db.Uuid
+  users                                               users               @relation(fields: [bidder_id], references: [id], onUpdate: NoAction)
+  equipment_listings_bids_item_idToequipment_listings equipment_listings? @relation("bids_item_idToequipment_listings", fields: [item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  equipment_listings                                  equipment_listings? @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lots                                                lots?               @relation(fields: [lot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  settlements                                         settlements[]
 
   @@index([bidder_id], map: "idx_bids_bidder")
   @@index([listing_id, amount(sort: Desc)], map: "idx_bids_listing_amount")
   @@index([lot_id, amount(sort: Desc)], map: "idx_bids_lot_amount")
+  @@index([item_id, amount(sort: Desc)], map: "idx_bids_item_amount")
 }
 
 model company_users {
@@ -178,7 +181,12 @@ model equipment_listings {
   lot_id                                               String?              @db.Uuid
   created_by_company                                   Boolean              @default(false)
   item_number                                          Int?
+  current_max_bid                                      Decimal?             @db.Decimal(14, 2)
+  bid_count                                            Int                  @default(0)
+  ends_at                                              DateTime?            @db.Timestamptz(6)
+  reserve_met                                          Boolean              @default(false)
   auctions_auctions_current_lot_idToequipment_listings auctions[]           @relation("auctions_current_lot_idToequipment_listings")
+  bids_bids_item_idToequipment_listings                bids[]               @relation("bids_item_idToequipment_listings")
   bids                                                 bids[]
   auctions                                             auctions?            @relation(fields: [auction_id], references: [id], onUpdate: NoAction)
   users                                                users                @relation(fields: [consignor_id], references: [id], onUpdate: NoAction)
