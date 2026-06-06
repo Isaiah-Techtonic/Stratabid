@@ -29,4 +29,13 @@ export class AuctionsController {
   setOpen(@Req() req: Request, @Param('id') id: string, @Body() body: { open?: boolean }) {
     return this.auctionsService.setOpenForSubmissions((req as any).user, id, !!body?.open);
   }
+
+  // Advance auction lifecycle (owner/manager/admin)
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/status')
+  setStatus(@Req() req: Request, @Param('id') id: string, @Body() body: { status?: string }) {
+    if (!body?.status) throw new BadRequestException('status is required');
+    return this.auctionsService.setStatus((req as any).user, id, body.status);
+  }
+
 }

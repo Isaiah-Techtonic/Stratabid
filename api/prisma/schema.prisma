@@ -103,6 +103,7 @@ model auctions {
   auction_registrations                                          auction_registrations[]
   auction_companies                                              auction_companies                    @relation(fields: [company_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   equipment_listings_auctions_current_lot_idToequipment_listings equipment_listings?                  @relation("auctions_current_lot_idToequipment_listings", fields: [current_lot_id], references: [id], onUpdate: NoAction)
+  bid_increments                                                 bid_increments[]
   equipment_listings                                             equipment_listings[]
   lots                                                           lots[]
 
@@ -112,19 +113,22 @@ model auctions {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model bids {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  listing_id         String             @db.Uuid
-  bidder_id          String             @db.Uuid
-  amount             Decimal            @db.Decimal(14, 2)
-  origin             bid_origin         @default(online)
-  max_amount         Decimal?           @db.Decimal(14, 2)
-  created_at         DateTime           @default(now()) @db.Timestamptz(6)
-  users              users              @relation(fields: [bidder_id], references: [id], onUpdate: NoAction)
-  equipment_listings equipment_listings @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  listing_id         String?             @db.Uuid
+  bidder_id          String              @db.Uuid
+  amount             Decimal             @db.Decimal(14, 2)
+  origin             bid_origin          @default(online)
+  max_amount         Decimal?            @db.Decimal(14, 2)
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  lot_id             String?             @db.Uuid
+  users              users               @relation(fields: [bidder_id], references: [id], onUpdate: NoAction)
+  equipment_listings equipment_listings? @relation(fields: [listing_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  lots               lots?               @relation(fields: [lot_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   settlements        settlements[]
 
   @@index([bidder_id], map: "idx_bids_bidder")
   @@index([listing_id, amount(sort: Desc)], map: "idx_bids_listing_amount")
+  @@index([lot_id, amount(sort: Desc)], map: "idx_bids_lot_amount")
 }
 
 model company_users {
@@ -256,6 +260,11 @@ model lots {
   created_at         DateTime             @default(now()) @db.Timestamptz(6)
   updated_at         DateTime             @default(now()) @db.Timestamptz(6)
   sale_mode          lot_sale_mode        @default(individual)
+  current_max_bid    Decimal?             @db.Decimal(14, 2)
+  bid_count          Int                  @default(0)
+  ends_at            DateTime?            @db.Timestamptz(6)
+  reserve_met        Boolean              @default(false)
+  bids               bids[]
   equipment_listings equipment_listings[]
   auctions           auctions             @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users              users?               @relation(fields: [winning_bidder_id], references: [id], onUpdate: NoAction)
@@ -263,6 +272,17 @@ model lots {
   @@unique([auction_id, lot_number])
   @@index([auction_id], map: "idx_lots_auction")
   @@index([status], map: "idx_lots_status")
+}
+
+model bid_increments {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  auction_id String   @db.Uuid
+  min_amount Decimal  @db.Decimal(14, 2)
+  increment  Decimal  @db.Decimal(14, 2)
+  auctions   auctions @relation(fields: [auction_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([auction_id, min_amount])
+  @@index([auction_id, min_amount], map: "idx_increments_auction")
 }
 
 enum auction_format {

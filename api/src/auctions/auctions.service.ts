@@ -66,4 +66,32 @@ export class AuctionsService {
       select: { id: true, open_for_submissions: true },
     });
   }
+
+  // Advance auction lifecycle. When going live, stamp each lot's ends_at from the auction.
+  async setStatus(actor: Actor, auctionId: string, status: string) {
+    const valid = ['draft','scheduled','live','paused','completed','cancelled'];
+    if (!valid.includes(status)) throw new BadRequestException('Invalid status');
+    const auction = await this.prisma.auctions.findUnique({
+      where: { id: auctionId }, select: { company_id: true, ends_at: true },
+    });
+    if (!auction) throw new NotFoundException('Auction not found');
+    if (actor.role !== 'admin') {
+      const m = await this.prisma.company_users.findFirst({
+        where: { company_id: auction.company_id, user_id: actor.sub }, select: { role: true },
+      });
+      if (!m || (m.role !== 'owner' && m.role !== 'manager')) {
+        throw new ForbiddenException('Only an owner or manager can change auction status');
+      }
+    }
+    await this.prisma.auctions.update({ where: { id: auctionId }, data: { status: status as any } });
+    // Going live: set ends_at on any lot that doesn't have one yet, from the auction end.
+    if (status === 'live' && auction.ends_at) {
+      await this.prisma.lots.updateMany({
+        where: { auction_id: auctionId, ends_at: null },
+        data: { ends_at: auction.ends_at },
+      });
+    }
+    return { id: auctionId, status };
+  }
+
 }
