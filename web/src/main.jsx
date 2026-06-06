@@ -10,6 +10,13 @@ import AccountPage from '@/pages/AccountPage.jsx';
 import CustomerHome from '@/pages/CustomerHome.jsx';
 import CompanyPortal from '@/pages/CompanyPortal.jsx';
 import CompanyTeamPage from '@/pages/CompanyTeamPage.jsx';
+import SubmitEquipmentPage from '@/pages/SubmitEquipmentPage.jsx';
+import MyListingsPage from '@/pages/MyListingsPage.jsx';
+import ReviewQueuePage from '@/pages/ReviewQueuePage.jsx';
+import HomePage from '@/pages/public/HomePage.jsx';
+import BrowsePage from '@/pages/public/BrowsePage.jsx';
+import PublicAuctionPage from '@/pages/public/PublicAuctionPage.jsx';
+import PublicListingPage from '@/pages/public/PublicListingPage.jsx';
 import '@/index.css';
 
 function Protected({ role, children }) {
@@ -30,12 +37,19 @@ function RootRedirect() {
 function App() {
   return (
     <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/browse" element={<BrowsePage />} />
+      <Route path="/a/:id" element={<PublicAuctionPage />} />
+      <Route path="/l/:id" element={<PublicListingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/account" element={<Protected><AccountPage /></Protected>} />
       <Route path="/home" element={<Protected><CustomerHome /></Protected>} />
       <Route path="/company" element={<Protected><CompanyPortal /></Protected>} />
       <Route path="/company/:id/team" element={<Protected><CompanyTeamPage /></Protected>} />
+      <Route path="/submit" element={<Protected><SubmitEquipmentPage /></Protected>} />
+      <Route path="/my-listings" element={<Protected><MyListingsPage /></Protected>} />
+      <Route path="/auctions/:id/review" element={<Protected><ReviewQueuePage /></Protected>} />
       <Route path="/admin" element={<Protected role="admin"><AdminPage /></Protected>} />
       <Route path="/auctions/:id" element={<Protected role="admin"><AuctionDetailPage /></Protected>} />
       <Route path="*" element={<RootRedirect />} />

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/auth.jsx';
-import { Gavel, LogOut, User, Building2 } from 'lucide-react';
+import { Gavel, LogOut, User, Building2, Home } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -12,7 +12,7 @@ export default function AppShell({ children }) {
     <div className="min-h-screen">
       <header className="sticky top-0 z-50 border-b border-border bg-navy-deep/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <button onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/account')} className="flex items-center gap-2.5">
+          <button onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/home')} className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 place-items-center rounded-md bg-gold">
               <Gavel className="h-5 w-5 text-navy-deep" />
             </span>
@@ -23,6 +23,9 @@ export default function AppShell({ children }) {
           <div className="flex items-center gap-3">
             {user?.role === 'admin' && <Badge>Master Admin</Badge>}
             <span className="hidden text-sm text-muted-foreground sm:inline">{user?.email}</span>
+            <Button variant="ghost" size="sm" onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/home')}>
+              <Home className="h-4 w-4" /> Home
+            </Button>
             {user?.role !== 'admin' && (
               <Button variant="ghost" size="sm" onClick={() => navigate('/company')}>
                 <Building2 className="h-4 w-4" /> Portal

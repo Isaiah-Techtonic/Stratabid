@@ -34,7 +34,17 @@ export default function CustomerHome() {
               <h3 className="text-lg">Sell Equipment</h3>
               <p className="text-sm text-muted-foreground">Submit your equipment to an auction.</p>
             </div>
-            <Button variant="outline" size="sm" disabled>Coming soon</Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/submit')}>Submit</Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="flex flex-col items-start gap-3 pt-6">
+            <span className="grid h-12 w-12 place-items-center rounded-lg bg-gold/15 text-gold"><Package className="h-6 w-6" /></span>
+            <div>
+              <h3 className="text-lg">My Listings</h3>
+              <p className="text-sm text-muted-foreground">Track your submitted equipment.</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => navigate('/my-listings')}>View</Button>
           </CardContent>
         </Card>
         <Card>

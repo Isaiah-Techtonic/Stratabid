@@ -94,6 +94,7 @@ model auctions {
   cover_image_url                                                String?
   youtube_stream_url                                             String?
   current_lot_id                                                 String?                              @db.Uuid
+  open_for_submissions                                           Boolean                              @default(false)
   auction_financials                                             auction_financials?
   auction_notification_subscriptions                             auction_notification_subscriptions[]
   auction_registrations                                          auction_registrations[]
@@ -221,6 +222,13 @@ model users {
   company_users                                                  company_users[]
   equipment_listings                                             equipment_listings[]
   equipment_listings_equipment_listings_winning_bidder_idTousers equipment_listings[]                 @relation("equipment_listings_winning_bidder_idTousers")
+}
+
+model migrations {
+  filename   String    @id
+  applied_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@map("_migrations")
 }
 
 enum auction_format {

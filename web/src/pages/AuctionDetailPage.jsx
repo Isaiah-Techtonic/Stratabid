@@ -20,6 +20,7 @@ export default function AuctionDetailPage() {
   const [listings, setListings] = useState([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [openFlag, setOpenFlag] = useState(false);
 
   const empty = {
     title: '', category: 'equipment', subcategory: '', make: '', model: '', year: '',
@@ -30,7 +31,18 @@ export default function AuctionDetailPage() {
   function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
 
   async function load() {
-    try { setListings(await api.listings(id)); } catch (e) { setError(e.message); }
+    try {
+      setListings(await api.listings(id));
+      const all = await api.auctions();
+      const a = all.find((x) => x.id === id);
+      if (a) setOpenFlag(!!a.open_for_submissions);
+    } catch (e) { setError(e.message); }
+  }
+
+  async function toggleOpen() {
+    setError('');
+    try { const r = await api.setAuctionOpen(id, !openFlag); setOpenFlag(r.open_for_submissions); }
+    catch (e) { setError(e.message); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
 
@@ -71,6 +83,13 @@ export default function AuctionDetailPage() {
       <div className="mb-8">
         <h1 className="text-3xl">Auction Lots</h1>
         <p className="mt-1 text-muted-foreground">Manage equipment listings for this auction.</p>
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <Button variant="outline" size="sm" onClick={() => navigate(`/auctions/${id}/review`)}>Review Queue</Button>
+        <Button variant={openFlag ? 'default' : 'outline'} size="sm" onClick={toggleOpen}>
+          {openFlag ? 'Open for submissions ✓' : 'Open for submissions'}
+        </Button>
       </div>
 
       {error && <div className="mb-6 rounded-md border border-destructive bg-destructive/10 px-4 py-3 text-sm text-red-300">{error}</div>}

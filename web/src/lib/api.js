@@ -28,6 +28,12 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  // ---- public storefront (no auth) ----
+  pubFeatured: () => request('/public/featured'),
+  pubAuctions: (params = '') => request(`/public/auctions${params}`),
+  pubAuctionDetail: (id) => request(`/public/auctions/${id}`),
+  pubListingDetail: (id) => request(`/public/listings/${id}`),
+  pubSearch: (q) => request(`/public/search?q=${encodeURIComponent(q)}`),
   login: (email, password) =>
     request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
   register: (email, full_name, password) =>
@@ -56,4 +62,26 @@ export const api = {
     request(`/companies/${companyId}/users/${membershipId}`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   removeMember: (companyId, membershipId) =>
     request(`/companies/${companyId}/users/${membershipId}`, { method: 'DELETE' }),
+  openAuctions: () => request('/auctions/open'),
+  setAuctionOpen: (auctionId, open) =>
+    request(`/auctions/${auctionId}/submissions`, { method: 'PATCH', body: JSON.stringify({ open }) }),
+  submitListing: (payload) =>
+    request('/listings', { method: 'POST', body: JSON.stringify(payload) }),
+  mySubmissions: () => request('/listings/mine'),
+  reviewQueue: (auctionId) => request(`/listings/review-queue?auction_id=${auctionId}`),
+  reviewListing: (id, payload) =>
+    request(`/listings/${id}/review`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  uploadImage: async (file) => {
+    const token = localStorage.getItem('stratabid_token');
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/uploads/image', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: fd,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || 'Upload failed');
+    return data; // { path }
+  },
 };

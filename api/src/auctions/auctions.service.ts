@@ -1,71 +1,69 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
+
+type Actor = { sub: string; email: string; role: string };
 
 @Injectable()
 export class AuctionsService {
   constructor(private prisma: PrismaService) {}
 
-  // Public-safe list: only non-sensitive columns; includes the company name.
   async findAll() {
     return this.prisma.auctions.findMany({
       select: {
-        id: true,
-        title: true,
-        description: true,
-        format: true,
-        status: true,
-        starts_at: true,
-        ends_at: true,
-        location_city: true,
-        location_state: true,
-        created_at: true,
+        id: true, title: true, description: true, format: true, status: true,
+        starts_at: true, ends_at: true, location_city: true, location_state: true,
+        open_for_submissions: true, created_at: true,
         auction_companies: { select: { id: true, name: true } },
       },
       orderBy: { created_at: 'desc' },
     });
   }
 
-  async create(data: {
-    company_id: string;
-    title: string;
-    description?: string;
-    format?: string;
-    starts_at?: string;
-    ends_at?: string;
-    location_city?: string;
-    location_state?: string;
-    location_address?: string;
-  }) {
+  // Public list of auctions currently open for submissions (for sellers).
+  async openForSubmissions() {
+    return this.prisma.auctions.findMany({
+      where: { open_for_submissions: true },
+      select: {
+        id: true, title: true, description: true, starts_at: true, ends_at: true,
+        location_city: true, location_state: true,
+        auction_companies: { select: { id: true, name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  async create(data: any) {
     const company = await this.prisma.auction_companies.findUnique({
-      where: { id: data.company_id },
-      select: { id: true },
+      where: { id: data.company_id }, select: { id: true },
     });
     if (!company) throw new BadRequestException('Unknown company_id');
-
     return this.prisma.auctions.create({
       data: {
-        company_id: data.company_id,
-        title: data.title,
-        description: data.description ?? null,
-        format: data.format === 'live_webcast' ? 'live_webcast' : 'timed',
-        status: 'draft',
+        company_id: data.company_id, title: data.title, description: data.description ?? null,
+        format: data.format === 'live_webcast' ? 'live_webcast' : 'timed', status: 'draft',
         starts_at: data.starts_at ? new Date(data.starts_at) : null,
         ends_at: data.ends_at ? new Date(data.ends_at) : null,
-        location_city: data.location_city ?? null,
-        location_state: data.location_state ?? null,
-        location_address: data.location_address ?? null,
+        location_city: data.location_city ?? null, location_state: data.location_state ?? null,
       },
-      select: {
-        id: true,
-        title: true,
-        format: true,
-        status: true,
-        starts_at: true,
-        ends_at: true,
-        location_city: true,
-        location_state: true,
-        company_id: true,
-      },
+      select: { id: true, title: true, status: true, company_id: true },
+    });
+  }
+
+  // Toggle whether an auction accepts seller submissions. Company staff or admin only.
+  async setOpenForSubmissions(actor: Actor, auctionId: string, open: boolean) {
+    const auction = await this.prisma.auctions.findUnique({
+      where: { id: auctionId }, select: { company_id: true },
+    });
+    if (!auction) throw new NotFoundException('Auction not found');
+    if (actor.role !== 'admin') {
+      const membership = await this.prisma.company_users.findFirst({
+        where: { company_id: auction.company_id, user_id: actor.sub }, select: { role: true },
+      });
+      if (!membership) throw new ForbiddenException('You cannot modify this auction');
+    }
+    return this.prisma.auctions.update({
+      where: { id: auctionId }, data: { open_for_submissions: open },
+      select: { id: true, open_for_submissions: true },
     });
   }
 }

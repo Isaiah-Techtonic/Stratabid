@@ -4,9 +4,11 @@ import { AuctionsModule } from './auctions/auctions.module';
 import { AuthModule } from './auth/auth.module';
 import { CompaniesModule } from './companies/companies.module';
 import { ListingsModule } from './listings/listings.module';
+import { UploadsModule } from './uploads/uploads.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
-  imports: [AuctionsModule, AuthModule, CompaniesModule, ListingsModule],
+  imports: [AuctionsModule, AuthModule, CompaniesModule, ListingsModule, UploadsModule, PublicModule],
   controllers: [HealthController],
   providers: [],
 })
