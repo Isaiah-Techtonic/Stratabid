@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
+import { useAuth } from '@/lib/auth.jsx';
 import AppShell from '@/components/AppShell.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,10 +19,14 @@ const MILES_CATEGORIES = ['vehicle', 'trailer'];
 export default function AuctionDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [listings, setListings] = useState([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [openFlag, setOpenFlag] = useState(false);
+  const [auction, setAuction] = useState(null);
+  const [memberships, setMemberships] = useState([]);
+  const [statusBusy, setStatusBusy] = useState(false);
   const [photos, setPhotos] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [decoding, setDecoding] = useState(false);
@@ -42,7 +47,7 @@ export default function AuctionDetailPage() {
       setListings(await api.listings(id));
       const all = await api.auctions();
       const a = all.find((x) => x.id === id);
-      if (a) setOpenFlag(!!a.open_for_submissions);
+      if (a) { setOpenFlag(!!a.open_for_submissions); setAuction(a); }
     } catch (e) { setError(e.message); }
   }
 
@@ -52,6 +57,7 @@ export default function AuctionDetailPage() {
     catch (e) { setError(e.message); }
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [id]);
+  useEffect(() => { api.myCompanies().then(setMemberships).catch(() => {}); }, []);
 
   async function decodeVin() {
     const vin = (form.vin || '').trim();
@@ -126,8 +132,50 @@ export default function AuctionDetailPage() {
     try { await api.setListingStatus(lid, status); await load(); } catch (e) { setError(e.message); }
   }
 
+  // Advance the auction's lifecycle, then reload so the badge + buttons reflect the new state.
+  async function changeAuctionStatus(status) {
+    setError(''); setStatusBusy(true);
+    try { await api.setAuctionStatus(id, status); await load(); }
+    catch (e) { setError(e.message); }
+    finally { setStatusBusy(false); }
+  }
+  function goLive() {
+    if (!window.confirm('Going live opens bidding on all approved items and stamps their end times from the auction’s end time. Continue?')) return;
+    changeAuctionStatus('live');
+  }
+  function cancelAuction() {
+    if (!window.confirm('Cancel this auction? Bidding will be stopped and this cannot be undone.')) return;
+    changeAuctionStatus('cancelled');
+  }
+
   const parentOptions = listings.filter((l) => l.category !== 'attachment');
   const field = (label, node) => <div className="space-y-1.5"><Label>{label}</Label>{node}</div>;
+
+  // Only an admin or an owner/manager of this auction's company may change its status
+  // (mirrors the backend's setStatus authorization).
+  const companyId = auction?.auction_companies?.id;
+  const canManage = !!auction && (
+    user?.role === 'admin' ||
+    memberships.some((m) => m.company?.id === companyId && (m.role === 'owner' || m.role === 'manager'))
+  );
+  // Valid forward transitions for each status; "Cancel" is offered separately for any non-terminal state.
+  const LIFECYCLE = {
+    draft: [{ label: 'Publish', onClick: () => changeAuctionStatus('scheduled') }],
+    scheduled: [
+      { label: 'Go Live', onClick: goLive },
+      { label: 'Back to Draft', variant: 'outline', onClick: () => changeAuctionStatus('draft') },
+    ],
+    live: [
+      { label: 'Pause', variant: 'outline', onClick: () => changeAuctionStatus('paused') },
+      { label: 'Complete', onClick: () => changeAuctionStatus('completed') },
+    ],
+    paused: [
+      { label: 'Resume', onClick: () => changeAuctionStatus('live') },
+      { label: 'Complete', onClick: () => changeAuctionStatus('completed') },
+    ],
+  };
+  const lifecycleActions = (auction && LIFECYCLE[auction.status]) || [];
+  const showCancel = !!auction && auction.status !== 'completed' && auction.status !== 'cancelled';
 
   return (
     <AppShell>
@@ -135,9 +183,35 @@ export default function AuctionDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Back to dashboard
       </Button>
       <div className="mb-8">
-        <h1 className="text-3xl">Auction Items</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl">{auction?.title || 'Auction Items'}</h1>
+          {auction && <Badge status={auction.status}>{auction.status}</Badge>}
+        </div>
         <p className="mt-1 text-muted-foreground">Add and review equipment items, then organize them into lots.</p>
       </div>
+
+      {canManage && auction && (
+        <Card className="mb-6">
+          <CardHeader><CardTitle>Auction Lifecycle</CardTitle></CardHeader>
+          <CardContent className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-muted-foreground">Current status:</span>
+            <Badge status={auction.status}>{auction.status}</Badge>
+            <div className="ml-auto flex flex-wrap gap-2">
+              {lifecycleActions.map((a) => (
+                <Button key={a.label} size="sm" variant={a.variant || 'default'} disabled={statusBusy} onClick={a.onClick}>
+                  {a.label}
+                </Button>
+              ))}
+              {showCancel && (
+                <Button size="sm" variant="destructive" disabled={statusBusy} onClick={cancelAuction}>Cancel</Button>
+              )}
+              {lifecycleActions.length === 0 && !showCancel && (
+                <span className="text-sm text-muted-foreground">No further actions for a {auction.status} auction.</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" onClick={() => navigate(`/auctions/${id}/review`)}>Review Queue</Button>

@@ -70,6 +70,8 @@ export const api = {
   openAuctions: () => request('/auctions/open'),
   setAuctionOpen: (auctionId, open) =>
     request(`/auctions/${auctionId}/submissions`, { method: 'PATCH', body: JSON.stringify({ open }) }),
+  setAuctionStatus: (auctionId, status) =>
+    request(`/auctions/${auctionId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
   submitListing: (payload) =>
     request('/listings', { method: 'POST', body: JSON.stringify(payload) }),
   mySubmissions: () => request('/listings/mine'),

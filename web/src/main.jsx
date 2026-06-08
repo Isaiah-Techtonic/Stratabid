@@ -53,7 +53,7 @@ function App() {
       <Route path="/auctions/:id/review" element={<Protected><ReviewQueuePage /></Protected>} />
       <Route path="/auctions/:id/lots" element={<Protected><LotComposerPage /></Protected>} />
       <Route path="/admin" element={<Protected role="admin"><AdminPage /></Protected>} />
-      <Route path="/auctions/:id" element={<Protected role="admin"><AuctionDetailPage /></Protected>} />
+      <Route path="/auctions/:id" element={<Protected><AuctionDetailPage /></Protected>} />
       <Route path="*" element={<RootRedirect />} />
     </Routes>
   );
