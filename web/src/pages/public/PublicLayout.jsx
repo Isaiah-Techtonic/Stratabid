@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/lib/auth.jsx';
-import { Gavel, Search } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Logo from '@/components/Logo.jsx';
 
 const CATEGORIES = ['Construction', 'Farm Equipment', 'Commercial Trucks', 'Vehicles', 'Trailers', 'Other'];
 
@@ -22,10 +23,7 @@ export default function PublicLayout({ children }) {
       {/* Top bar */}
       <header className="sticky top-0 z-50 border-b border-border bg-navy-deep/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <button onClick={() => navigate('/')} className="flex shrink-0 items-center gap-2.5">
-            <span className="grid h-8 w-8 place-items-center rounded-md bg-gold"><Gavel className="h-5 w-5 text-navy-deep" /></span>
-            <span className="font-display text-2xl uppercase tracking-wide">Strata<span className="text-gold">Bid</span></span>
-          </button>
+          <Logo />
 
           <form onSubmit={submitSearch} className="relative hidden flex-1 md:block">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
