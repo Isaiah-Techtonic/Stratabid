@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # StrataBid deploy script — run from /home/isaiah/stratabid
 # Usage:
-#   ./deploy.sh            # rebuild api + web, restart nginx
+#   ./deploy.sh            # rebuild api + web + worker, restart nginx
 #   ./deploy.sh --migrate  # also run any pending SQL migrations + re-introspect Prisma
 #   ./deploy.sh --api      # rebuild only the api
 #   ./deploy.sh --web      # rebuild only the web frontend
+#   ./deploy.sh --worker   # rebuild only the worker
 #
 # Safe to run repeatedly. Uses --no-cache on rebuilds so code changes always land.
 
@@ -45,21 +46,25 @@ run_migrations() {
   echo "    Prisma client regenerated."
 }
 
-REBUILD_API=true
-REBUILD_WEB=true
+REBUILD_API=false
+REBUILD_WEB=false
+REBUILD_WORKER=false
 DO_MIGRATE=false
+EXPLICIT_TARGET=false
 
 for arg in "$@"; do
   case "$arg" in
     --migrate) DO_MIGRATE=true ;;
-    --api) REBUILD_WEB=false ;;
-    --web) REBUILD_API=false ;;
+    --api) REBUILD_API=true; EXPLICIT_TARGET=true ;;
+    --web) REBUILD_WEB=true; EXPLICIT_TARGET=true ;;
+    --worker) REBUILD_WORKER=true; EXPLICIT_TARGET=true ;;
   esac
 done
 
-# If only --migrate was passed (no --api/--web), still rebuild both by default.
-if [ "${1:-}" = "--migrate" ] && [ "$#" -eq 1 ]; then
-  REBUILD_API=true; REBUILD_WEB=true
+# With no explicit target flag (e.g. bare ./deploy.sh or just --migrate),
+# rebuild all the code services.
+if [ "$EXPLICIT_TARGET" = false ]; then
+  REBUILD_API=true; REBUILD_WEB=true; REBUILD_WORKER=true
 fi
 
 echo "════════ StrataBid deploy ════════"
@@ -71,6 +76,7 @@ fi
 TARGETS=""
 [ "$REBUILD_API" = true ] && TARGETS="$TARGETS api"
 [ "$REBUILD_WEB" = true ] && TARGETS="$TARGETS web"
+[ "$REBUILD_WORKER" = true ] && TARGETS="$TARGETS worker"
 
 if [ -n "$TARGETS" ]; then
   echo "──► Rebuilding:$TARGETS (no-cache)…"
