@@ -1,4 +1,5 @@
-import { Injectable, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import Redis from 'ioredis';
 import { PrismaService } from '../prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -16,7 +17,10 @@ type Actor = { sub: string; email: string; role: string };
 
 @Injectable()
 export class BiddingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject('REDIS_PUB') private redis: Redis,
+  ) {}
 
   // Determine the bid increment that applies at a given price, per the auction's tiers.
   private incrementFor(price: number, tiers: { min: number; inc: number }[]): number {
@@ -66,7 +70,7 @@ export class BiddingService {
   async placeBid(actor: Actor, itemId: string, maxAmount: number) {
     if (!(maxAmount > 0)) throw new BadRequestException('Bid amount must be positive');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // Lock the lot row for the duration of this transaction.
       const locked = await tx.$queryRaw<any[]>(
         Prisma.sql`SELECT id, auction_id, status, current_bid, current_max_bid,
@@ -176,8 +180,32 @@ export class BiddingService {
         you_are_winning: newLeader === actor.sub,
         reserve_met: reserveMet,
         ends_at: endsAt,
+        // Carried out of the transaction for the post-commit realtime publish.
+        winning_bidder_id: newLeader,
+        bid_count: Number(lot.bid_count) + 1,
       };
     });
+
+    // AFTER the transaction commits, publish the updated item bid-state so the
+    // realtime service can fan it out to everyone watching this item. A publish
+    // failure must never fail an already-committed bid.
+    try {
+      await this.redis.publish(
+        'bid-updates',
+        JSON.stringify({
+          item_id: result.item_id,
+          current_bid: result.current_bid,
+          bid_count: result.bid_count,
+          reserve_met: result.reserve_met,
+          winning_bidder_id: result.winning_bidder_id,
+          ends_at: result.ends_at,
+        }),
+      );
+    } catch (e) {
+      console.error('[bidding] bid-updates publish failed:', (e as Error).message);
+    }
+
+    return result;
   }
 
   // A bidder's bid history on a lot (their own bids only).

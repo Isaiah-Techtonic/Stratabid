@@ -28,6 +28,11 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  // ---- bidding (per item) ----
+  itemBidState: (id) => request(`/bidding/items/${id}`),
+  placeBid: (id, max_amount) =>
+    request(`/bidding/items/${id}`, { method: 'POST', body: JSON.stringify({ max_amount }) }),
+  myItemBids: (id) => request(`/bidding/items/${id}/mine`),
   // ---- public storefront (no auth) ----
   pubFeatured: () => request('/public/featured'),
   pubAuctions: (params = '') => request(`/public/auctions${params}`),

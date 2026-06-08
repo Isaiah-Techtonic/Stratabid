@@ -1,0 +1,14 @@
+{
+  "name": "stratabid-realtime",
+  "version": "0.1.0",
+  "private": true,
+  "description": "StrataBid realtime service — Socket.IO bid-update fanout from Redis pub/sub",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "ioredis": "^5.4.1",
+    "socket.io": "^4.7.5"
+  }
+}

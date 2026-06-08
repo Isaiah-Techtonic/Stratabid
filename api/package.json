@@ -1,7 +1,7 @@
 {
   "name": "stratabid-api",
   "version": "0.1.0",
-  "description": "StrataBid API \u2014 auth, catalog, listings, clerking, settlement",
+  "description": "StrataBid API — auth, catalog, listings, clerking, settlement",
   "scripts": {
     "build": "nest build",
     "start": "node dist/main.js",
@@ -16,6 +16,7 @@
     "@nestjs/platform-express": "^10.4.0",
     "@prisma/client": "^5.22.0",
     "bcrypt": "^5.1.1",
+    "ioredis": "^5.4.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "sharp": "^0.33.5"

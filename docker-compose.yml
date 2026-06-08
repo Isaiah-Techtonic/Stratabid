@@ -61,6 +61,17 @@ services:
     build: ./web
     restart: unless-stopped
 
+  realtime:
+    build: ./realtime
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
@@ -75,6 +86,7 @@ services:
     depends_on:
       - api
       - web
+      - realtime
 
   certbot:
     image: certbot/certbot:latest

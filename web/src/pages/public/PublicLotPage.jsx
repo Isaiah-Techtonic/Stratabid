@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth.jsx';
 import PublicLayout from './PublicLayout.jsx';
+import BidPanel from '@/components/BidPanel.jsx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -57,6 +58,10 @@ function ItemCard({ it }) {
               <Spec label="Condition" value={it.condition} />
               <Spec label="Runs" value={it.runs == null ? null : (it.runs ? 'Yes' : 'No')} />
             </div>
+            {/* Live, per-item bidding. */}
+            <div className="mt-4">
+              <BidPanel itemId={it.id} startingBid={it.current_bid} />
+            </div>
           </div>
         </div>
       </CardContent>
@@ -98,12 +103,11 @@ export default function PublicLotPage() {
             {lot.description && <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{lot.description}</p>}
           </div>
           <div className="rounded-lg border border-border bg-card p-4 text-center">
-            <div className="text-sm text-muted-foreground">Starting bid</div>
-            <div className="font-display text-3xl text-gold">${lot.starting_bid ?? 0}</div>
-            <Button className="mt-3 w-full" onClick={() => navigate(user ? '/home' : '/register')}>
-              {user ? 'Register to Bid' : 'Sign up to Bid'}
-            </Button>
-            <p className="mt-2 text-xs text-muted-foreground">Online bidding coming soon</p>
+            <div className="text-sm text-muted-foreground">{items.length > 1 ? 'Items in this lot' : 'Bidding'}</div>
+            <div className="font-display text-3xl text-gold">{items.length}</div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {user ? 'Place live bids on each item below.' : 'Sign in to bid on each item below.'}
+            </p>
           </div>
         </div>
 
